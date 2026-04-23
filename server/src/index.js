@@ -1,17 +1,38 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import pool from "../src/db.js";
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+
+
+import authRoutes from "./routes/authRoutes.js";
+// import commentRoutes from "./routes/commentRoutes.js";
+// import issueRoutes from "./routes/issueRoutes.js";
+// import notificationRoutes from "./routes/notificationRoutes.js"
+// import projectRoutes from "./routes/projectRoutes.js"
+// import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT;
 
-// app.get('/api/ping', (req, res) =>{
-//     res.json({message: "Backend lives"})
-// });
+app.use(cors({ 
+    origin: 'http://localhost:5173', 
+    credentials: true 
+}));
 
-app.listen(PORT, () =>{
-    console.log(`listening to port ${PORT}`);
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/api/auth', authRoutes);
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status).json({ 
+    success: false, 
+    message: err.message || 'Server error'});
 });
 
+const PORT = process.env.PORT;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`)
+});
