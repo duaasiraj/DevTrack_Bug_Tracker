@@ -49,7 +49,7 @@ bug-tracker/
 │   │   │                          each function receives (req, res),
 │   │   │                          talks to the database, and sends back JSON
 │   │   │
-│   │   ├── authController.js   ← register() and login()
+│   │   ├── authController.js   ← register() and login() and logout() and getMe()
 │   │   │                          register: hashes password with bcrypt, inserts user
 │   │   │                          login: checks password, returns signed JWT
 │   │   │
