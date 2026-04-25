@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TYPE user_role AS ENUM('admin', 'project manager', 'developer', 'tester');
+CREATE TYPE user_role AS ENUM('admin', 'project_manager', 'developer', 'tester');
 
 CREATE TYPE project_status AS ENUM('active', 'archived', 'completed');
 
