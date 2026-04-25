@@ -9,7 +9,7 @@ import authRoutes from "./routes/authRoutes.js";
 // import issueRoutes from "./routes/issueRoutes.js";
 // import notificationRoutes from "./routes/notificationRoutes.js"
 // import projectRoutes from "./routes/projectRoutes.js"
-// import userRoutes from "./routes/userRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -24,6 +24,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
