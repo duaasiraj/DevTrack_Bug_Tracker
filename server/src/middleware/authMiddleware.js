@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 import pool from "../db.js";
 
 export const authMiddleware = async (req, res, next) =>{
-    console.log("auth middleware reached");
 
     let token;
     token = req.cookies.jwt;
