@@ -10,3 +10,5 @@ const createNotification = async(userId, issueId, triggeredBy, message, type) =>
         [userId, issueId, triggeredBy, message, type]
     );
 };
+
+export {createNotification};

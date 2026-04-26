@@ -35,7 +35,7 @@ const getIssues = async(req, res) =>{
         let query = `SELECT i.issue_id, i.title, i.description, i.type, i.priority, i.status, i.created_at, i.last_updated, i.resolved_at, u1.username AS reported_by_username, u2.username AS assigned_to_username, i.reported_by, i.assigned_to
         FROM issues i
         LEFT JOIN users u1 ON i.reported_by = u1.user_id
-        LEFT JOIN users u2 ON i.assigned_to = u2.user)id
+        LEFT JOIN users u2 ON i.assigned_to = u2.user_id
         WHERE i.project_id = $1`;
 
         const values = [project_id];
@@ -102,7 +102,7 @@ const getIssueById = async (req, res) =>{
 
         if (result.rows.length === 0){
 
-            return res.status(400).json({
+            return res.status(404).json({
                 success: false,
                 message: 'Issue not found'
             });
@@ -228,11 +228,15 @@ const updateIssue = async(req, res) =>{
         const {title, description, type, priority, status, reason} = req.body;
 
         if (!title && !description && !type && !priority && !status){
+        
         return res.status(400).json({
             success: false,
             message: "No fields provided to update",
         });
         }
+
+
+
         const curr = await pool.query(
             `SELECT * FROM issues WHERE issue_id = $1`,
             [id]
@@ -287,7 +291,7 @@ const updateIssue = async(req, res) =>{
                 description = COALESCE($2, description),
                 type = COALESCE($3, type),
                 priority = COALESCE($4, priority),
-                status = COALESCE($5, status),
+                status = COALESCE($5, status)
             WHERE issue_id = $6
             RETURNING *`,
             [title || null, description || null, type || null, priority || null, status || null,id]
@@ -295,7 +299,7 @@ const updateIssue = async(req, res) =>{
 
         if(status && status !== issue.status){
             await client.query(
-                `INSERT INTO issue_status_history (issue_id, changed_by, old_status, new_status)
+                `INSERT INTO issue_status_history (issue_id, changed_by, old_status, new_status, reason)
                 VALUES ($1, $2, $3, $4, $5)`,
                 [id, req.user.user_id, issue.status, status, reason || null]
             );
@@ -326,6 +330,7 @@ const assignIssue = async(req, res) =>{
 
     const client = await pool.connect();
 
+
     try{
 
         const id = req.params.id;
@@ -337,6 +342,8 @@ const assignIssue = async(req, res) =>{
                 message: "assigned_to (user_id) is required",
             });
         }
+
+
 
         const current = await pool.query(
             `SELECT * FROM issues WHERE issue_id = $1`,
@@ -351,7 +358,20 @@ const assignIssue = async(req, res) =>{
         }
 
         const issue = current.rows[0];
-    
+        
+        const managerCheck = await pool.query(
+            `SELECT 1 FROM project_members
+            WHERE project_id = $1 AND user_id = $2`,
+            [issue.project_id, req.user.user_id]
+        );
+
+
+        if(managerCheck.rows.length===0){
+            return res.status(403).json({
+                success: false,
+                message: "You cannot assign issues as you are not a part of this project"
+            });
+        }
         
             
         const memberCheck = await pool.query(
@@ -368,6 +388,13 @@ const assignIssue = async(req, res) =>{
             });
         }
 
+        if (issue.assigned_to === assigned_to) {
+            return res.status(400).json({
+                success:false,
+                message:"Issue already assigned to this user"
+            });
+        }
+
         await client.query("BEGIN");
 
         const result = await client.query(
@@ -379,10 +406,14 @@ const assignIssue = async(req, res) =>{
             [assigned_to, req.user.user_id, id]
         );
 
-        
-        await createNotification(assigned_to, id, req.user.user_id, `You have been assigned issue: ${issue.title}`, "assigned");
-        
+            
         await client.query("COMMIT");
+
+        try{
+        await createNotification(assigned_to, id, req.user.user_id, `You have been assigned issue: ${issue.title}`, "assigned");
+        }catch(notifError){
+            console.log("Notification failed:", notifError.message);
+        }
 
         res.status(200).json({
             success: true,
