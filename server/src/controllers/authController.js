@@ -140,7 +140,7 @@ const login = async (req, res) => {
             };
         res.status(200).json({
             success: true,
-            data: loginUser, token
+            data: loginUser
         });
 
     }catch(error){

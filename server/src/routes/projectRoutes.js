@@ -1,5 +1,6 @@
 import express from "express";
 import {updateMemberRole, getProjects, getAllProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, removeMember, addMember} from "../controllers/projectController.js";
+import {getLabels, createLabels, updateLabels, deleteLabel} from "../controllers/labelController.js";
 import {authMiddleware} from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
 
@@ -25,5 +26,15 @@ router.get("/:id/members", authMiddleware, getMembers);
 router.post("/:id/members", authMiddleware, roleMiddleware(["admin", "project_manager"]), addMember);
 
 router.delete("/:id/members/:userId", authMiddleware, roleMiddleware(["admin", "project_manager"]), removeMember);
+
+
+
+router.get("/:projectId/labels", authMiddleware, getLabels);
+
+router.post("/:projectId/labels", authMiddleware, roleMiddleware(["admin", "project_manager"]), createLabels);
+
+router.patch("/:projectId/labels/:labelId", authMiddleware, roleMiddleware(["admin", "project_manager"]), updateLabels);
+
+router.delete("/:projectId/labels/:labelId", authMiddleware, roleMiddleware(["admin", "project_manager"]), deleteLabel);
 
 export default router;
