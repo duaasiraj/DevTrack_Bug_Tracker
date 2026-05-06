@@ -1,13 +1,25 @@
-import { NavLink } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, FolderKanban, Bug, Bell, ShieldAlert, LogOut } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Menu, X, LayoutDashboard, FolderKanban, Bug, Bell, ShieldAlert, LogOut, LayoutGrid } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getLastProjectId } from '../hooks/useLastProjectId';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const userRole = 'Developer'; 
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const lastProjectId = getLastProjectId();
+  const boardPath = lastProjectId ? `/projects/${lastProjectId}/board` : '/projects';
+  const newIssuePath = lastProjectId ? `/projects/${lastProjectId}/issues/new` : '/projects';
+
+  function handleLogout() {
+    logout();
+    navigate('/signin');
+  }
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Projects', path: '/projects', icon: <FolderKanban size={20} /> },
-    { name: 'Issues', path: '/issues', icon: <Bug size={20} /> },
+    { name: 'Board', path: boardPath, icon: <LayoutGrid size={20} /> },
+    { name: 'Issues', path: newIssuePath, icon: <Bug size={20} /> },
     { name: 'Notifications', path: '/notifications', icon: <Bell size={20} /> },
   ];
 
@@ -30,9 +42,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           <X size={24} />
         </button>
 
-        <div className="px-6 mb-10 flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#78e5ef] rounded-lg flex items-center justify-center text-[#042124] font-bold">D</div>
-          <div className="text-xl font-bold tracking-tighter text-[#78e5ef]">DevTrack</div>
+        <div className="px-6 mb-8">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 bg-[#78e5ef] rounded-lg flex items-center justify-center text-[#042124] font-bold">D</div>
+            <div className="text-xl font-bold tracking-tighter text-[#78e5ef]">DevTrack</div>
+          </div>
+          {user && (
+            <p className="text-[11px] text-gray-500 truncate mt-2" title={user.email}>
+              {user.username}
+              <span className="block text-[#78e5ef]/60 capitalize">{String(user.role || '').replace('_', ' ')}</span>
+            </p>
+          )}
         </div>
 
       <nav className="flex-1 space-y-1 px-4">
@@ -53,7 +73,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </NavLink>
         ))}
 
-        {userRole === 'Admin' && (
+        {user?.role === 'admin' && (
           <NavLink
             to="/admin"
             className={({ isActive }) =>
@@ -69,7 +89,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </nav>
 
       <div className="px-6 mt-auto">
-        <button className="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+        >
           <LogOut size={20} />
           <span className="font-medium">Logout</span>
         </button>
