@@ -327,6 +327,35 @@ const detachLabel = async (req, res)=> {
 
     try {
         const {issueId, labelId} = req.params;
+
+        const issueCheck = await pool.query(
+            `SELECT project_id FROM issues WHERE issue_id = $1`,
+            [issueId]
+        );
+
+        if(issueCheck.rows.length === 0){
+            return res.status(404).json({
+                success: false,
+                message: "Issue not found"
+            });
+        }
+
+        const projectId = issueCheck.rows[0].project_id;
+
+        if(req.user.role !== "admin"){
+            const memberCheck = await pool.query(
+                `SELECT 1 FROM project_members
+                WHERE project_id = $1 AND user_id = $2`,
+                [projectId, req.user.user_id]
+            );
+
+            if(memberCheck.rows.length === 0){
+                return res.status(403).json({
+                    success: false,
+                    message: "You are not a member of this project"
+                });
+            }
+        }
     
         const result = await pool.query(
             `DELETE FROM issue_labels

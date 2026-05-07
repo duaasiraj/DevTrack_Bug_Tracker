@@ -1,130 +1,49 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import api from '../api/axios'
-import { useAuth } from '../context/AuthContext'
+import { Link } from 'react-router-dom'
+import { Lock } from 'lucide-react'
 
 export default function Register() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole] = useState('')
-  const [error, setError] = useState('')
-  const [username, setUsername] = useState('')
-  const { login } = useAuth()
-  const navigate = useNavigate()
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError('')
-
-    try {
-      const response = await api.post('/auth/register', { username, email, password, role })
-      login(response.data.data)
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong')
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-[#0a1f1f] flex flex-col items-center justify-center px-4">
-
-      {/* logo + heading */}
-      <div className="text-center mb-8">
-        <h1 className="text-white text-3xl font-bold tracking-tight">⊙DevTrack</h1>
-        <h2 className="text-white text-xl font-semibold mt-2">Create Account</h2>
+    <div className="min-h-screen bg-[#0a1f1f] flex flex-col items-center justify-center px-4 py-16 relative overflow-hidden">
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+        aria-hidden
+      >
+        <div className="w-full max-w-lg scale-110 blur-sm opacity-35">
+          <div className="rounded-2xl border border-[#1a3f3f] bg-[#0d2b2b]/80 p-8 space-y-4">
+            <div className="h-4 w-1/3 rounded bg-[#1a3f3f]" />
+            <div className="h-10 rounded-lg bg-[#0a1f1f] border border-[#1a3f3f]" />
+            <div className="h-10 rounded-lg bg-[#0a1f1f] border border-[#1a3f3f]" />
+            <div className="h-10 rounded-lg bg-[#0a1f1f] border border-[#1a3f3f]" />
+            <div className="h-11 rounded-lg bg-[#c8faf4]/20" />
+          </div>
+        </div>
       </div>
 
-      {/* card */}
-      <div className="bg-[#0d2b2b] border border-[#1a3f3f] rounded-2xl p-8 w-full max-w-md">
-
-        {/* error */}
-        {error && (
-          <p className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-2 mb-6">
-            {error}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-
-          {/* username */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[#7aa8a8] text-xs font-semibold uppercase tracking-widest">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your username"
-              className="bg-[#0a1f1f] border border-[#1a3f3f] text-white placeholder-[#3a6060] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#2a7a7a]"
-            />
-          </div>
-
-          {/* email */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[#7aa8a8] text-xs font-semibold uppercase tracking-widest">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="bg-[#0a1f1f] border border-[#1a3f3f] text-white placeholder-[#3a6060] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#2a7a7a]"
-            />
-          </div>
-
-          {/* role */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[#7aa8a8] text-xs font-semibold uppercase tracking-widest">
-              System Role
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="bg-[#0a1f1f] border border-[#1a3f3f] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#2a7a7a]"
-            >
-              <option value="">Select a role...</option>
-              <option value="admin">Admin</option>
-              <option value="project_manager">Project Manager</option>
-              <option value="developer">Developer</option>
-              <option value="tester">Tester</option>
-            </select>
-          </div>
-
-          {/* password */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[#7aa8a8] text-xs font-semibold uppercase tracking-widest">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="bg-[#0a1f1f] border border-[#1a3f3f] text-white placeholder-[#3a6060] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#2a7a7a]"
-            />
-          </div>
-
-          {/* submit */}
-          <button
-            type="submit"
-            className="mt-2 bg-[#c8faf4] text-[#0a1f1f] font-semibold py-3 rounded-lg text-sm hover:bg-[#a0f0e8] transition-colors"
+      <div className="relative z-10 w-full max-w-md text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-[#78e5ef]/40 bg-[#042124]/90 shadow-lg shadow-[#78e5ef]/10 backdrop-blur-sm">
+          <Lock className="h-10 w-10 text-[#78e5ef]" strokeWidth={2} aria-hidden />
+        </div>
+        <h1 className="mt-8 text-white text-3xl font-bold tracking-tight">⊙ DevTrack</h1>
+        <h2 className="mt-3 text-xl font-semibold text-[#c8faf4]">Registration is closed</h2>
+        <p className="mt-4 text-[#7aa8a8] text-sm leading-relaxed px-2">
+          New accounts are created only by your organization&apos;s administrator. Please contact your admin for
+          credentials, then sign in below.
+        </p>
+        <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+          <Link
+            to="/signin"
+            className="inline-flex items-center justify-center rounded-xl bg-[#c8faf4] text-[#0a1f1f] font-semibold px-8 py-3 text-sm hover:bg-[#a0f0e8] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c8faf4]/50"
           >
-            Register
-          </button>
-
-        </form>
-        {/* link */}
-        <p className="text-center text-[#7aa8a8] text-sm mt-6">
-          Already have an account?{' '}
-          <Link to="/signin" className="text-[#c8faf4] hover:underline">
             Sign in
           </Link>
-        </p>
-
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-xl border border-[#1a3f3f] text-[#7aa8a8] font-medium px-8 py-3 text-sm hover:bg-white/5 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+          >
+            Back to home
+          </Link>
+        </div>
       </div>
-
     </div>
   )
 }
