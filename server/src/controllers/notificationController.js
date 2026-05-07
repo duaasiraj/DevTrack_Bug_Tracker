@@ -5,14 +5,18 @@ const getNotifications = async (req, res) =>{
     try{
 
         const result = await pool.query(
-
-            `SELECT n.notif_id, n.message, n.type, n.is_read, n.created_at, n.issue_id, u.username AS triggered_by_username
+            `SELECT n.notif_id, n.message, n.type, n.is_read, n.created_at, n.issue_id,
+              u.username AS triggered_by_username,
+              i.project_id,
+              p.name AS project_name,
+              i.title AS issue_title
             FROM notifications n
             LEFT JOIN users u ON n.triggered_by = u.user_id
+            LEFT JOIN issues i ON n.issue_id = i.issue_id
+            LEFT JOIN projects p ON i.project_id = p.project_id
             WHERE n.user_id = $1
             ORDER BY n.created_at DESC`,
             [req.user.user_id]
-
         );
 
         res.status(200).json({

@@ -4,7 +4,7 @@ CREATE TYPE user_role AS ENUM('admin', 'project_manager', 'developer', 'tester')
 
 CREATE TYPE project_status AS ENUM('active', 'archived', 'completed');
 
-CREATE TYPE issue_type AS ENUM('bug', 'task', 'featre');
+CREATE TYPE issue_type AS ENUM('bug', 'task', 'feature');
 
 CREATE TYPE issue_priority AS ENUM('low', 'medium', 'high', 'critical');
 

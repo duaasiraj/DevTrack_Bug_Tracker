@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
         </AuthContext.Provider>
     )
 }
+// eslint-disable-next-line react-refresh/only-export-components -- hook colocated with provider
 export function useAuth() {
     return useContext(AuthContext)
 }

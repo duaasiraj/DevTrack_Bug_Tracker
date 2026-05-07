@@ -365,14 +365,14 @@ const assignIssue = async(req, res) =>{
             [issue.project_id, req.user.user_id]
         );
 
-
+        if(req.user.role !== "admin"){
         if(managerCheck.rows.length===0){
             return res.status(403).json({
                 success: false,
                 message: "You cannot assign issues as you are not a part of this project"
             });
         }
-        
+    }
             
         const memberCheck = await pool.query(
             `SELECT 1 FROM project_members

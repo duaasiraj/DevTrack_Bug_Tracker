@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { Menu } from 'lucide-react'
-import { Routes, Route, Outlet } from 'react-router-dom'
+import { Routes, Route, Outlet, Navigate } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Sign_in from './pages/Sign_in'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Sidebar from './components/Sidebar'
 import ProtectedRoute from './components/ProtectedRoute'
+import ProjectsPage from './pages/ProjectsPage'
+import IssueBoardPage from './pages/IssueBoardPage'
+import IssueCreatePage from './pages/IssueCreatePage'
+import IssueDetailPage from './pages/IssueDetailPage'
+import NotificationsPage from './pages/NotificationsPage'
 
 // layout wrapper — sidebar + header, renders child routes via Outlet
 function AppLayout() {
@@ -44,7 +49,12 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          {/* add more pages here as you build them */}
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId/board" element={<IssueBoardPage />} />
+          <Route path="/projects/:projectId/issues/new" element={<IssueCreatePage />} />
+          <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
+          <Route path="/issues" element={<Navigate to="/projects" replace />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
 
