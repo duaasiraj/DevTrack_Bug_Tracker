@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import { Link } from 'react-router-dom'
-import { Shield, GitBranch, Layout, Filter, Bell, MessageSquare } from 'lucide-react'
+import { Shield, GitBranch, Layout, Filter, Bell, MessageSquare, ArrowRight } from 'lucide-react'
 
 const features = [
   {
@@ -45,15 +45,15 @@ function Landing() {
         style={{ background: "radial-gradient(circle at center, #0f4c4c 0%, #0f172a 70%)" }}
         className="w-full min-h-screen"
       >
-        <div className="flex items-center justify-between gap-10 py-14 pl-6 pr-2 max-w-screen-xl mx-auto">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-10 py-12 sm:py-14 px-4 sm:pl-6 sm:pr-4 max-w-screen-xl mx-auto">
           {/* Left */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col w-full max-w-xl">
             <div className="inline-flex items-center gap-2 bg-teal-900/50 text-teal-400 text-xs px-3 py-1 rounded-full mb-6 w-fit">
               <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
               <span>DevTrack is now live</span>
             </div>
 
-            <h1 className="text-7xl font-bold text-white leading-tight mb-4">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight mb-4">
               Track every bug.<br />
               Ship with<br />
               <span className="font-bold text-teal-400">
@@ -63,19 +63,26 @@ function Landing() {
             <p className="text-gray-400 text-lg mb-8 max-w-md leading-relaxed">
               A simple issue tracker built for fast paced software development teams. Streamline your workflow, manage complex projects and deploy faster. QA testers, project managers, developers, all in one place.
             </p>
-            <div className="flex gap-4">
-              <Link to="/register" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl transition text-lg font-bold">
-                Start building →
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3.5 rounded-xl transition-colors text-base sm:text-lg font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+              >
+                Start building
+                <ArrowRight className="w-5 h-5" aria-hidden />
               </Link>
-              <button className="border border-blue-400/40 bg-blue-500/10 hover:bg-blue-500/20 backdrop-blur-sm text-blue-300 hover:text-white px-8 py-3.5 rounded-xl transition text-lg font-bold">
-                Book a demo
-              </button>
+              <Link
+                to="/about"
+                className="inline-flex items-center justify-center border border-teal-400/35 bg-teal-500/10 hover:bg-teal-500/15 backdrop-blur-sm text-teal-200 hover:text-white px-8 py-3.5 rounded-xl transition-colors text-base sm:text-lg font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/40"
+              >
+                About us
+              </Link>
             </div>
           </div>
 
           {/* Right */}
-          <div className="flex-1">
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 min-h-[560px]">
+          <div className="flex-1 w-full hidden md:block max-w-lg lg:max-w-none">
+            <div className="bg-slate-800/50 border border-slate-700/80 rounded-2xl p-6 min-h-[320px] lg:min-h-[560px] shadow-xl shadow-black/20">
               <div className="flex gap-1.5 mb-4">
                 <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
                 <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
@@ -116,7 +123,7 @@ function Landing() {
       </section>
 
       {/* Features */}
-      <section className="relative py-16 px-6">
+      <section id="features" className="relative py-16 px-6 scroll-mt-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.12),transparent_60%)]" />
 
         <div className="relative max-w-screen-xl mx-auto">
@@ -127,6 +134,13 @@ function Landing() {
             <p className="text-gray-400 text-sm">
               Everything you need to manage complex software projects, designed with a focus on performance and minimal friction.
             </p>
+            <Link
+              to="/features"
+              className="inline-flex items-center gap-1.5 mt-5 text-sm font-medium text-indigo-300 hover:text-indigo-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 rounded-lg px-2 py-1"
+            >
+              Explore all features
+              <ArrowRight className="w-4 h-4" aria-hidden />
+            </Link>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -149,14 +163,22 @@ function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 px-10 py-4">
-        <div className="max-w-screen-xl mx-auto flex items-center gap-6">
-          <p className="font-bold text-sm text-cyan-400 mr-auto">DevTrack</p>
-          <p className="text-gray-500 text-xs">© {new Date().getFullYear()} DevTrack. Built for high-velocity teams.</p>
-          <div className="flex items-center gap-5">
-            {["Documentation", "Changelog"].map(item => (
-              <a key={item} href="#" className="text-gray-500 hover:text-white text-xs transition">{item}</a>
-            ))}
+      <footer className="bg-slate-900 border-t border-slate-800 px-6 sm:px-10 py-6">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-4">
+          <p className="font-bold text-sm text-cyan-400 sm:mr-auto">DevTrack</p>
+          <p className="text-gray-500 text-xs order-last sm:order-none w-full sm:w-auto text-center sm:text-left">
+            © {new Date().getFullYear()} DevTrack. Built for high-velocity teams.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link to="/features" className="text-gray-500 hover:text-white text-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded">
+              Features
+            </Link>
+            <Link to="/roles" className="text-gray-500 hover:text-white text-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded">
+              Roles
+            </Link>
+            <Link to="/about" className="text-gray-500 hover:text-white text-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded">
+              About us
+            </Link>
           </div>
         </div>
       </footer>

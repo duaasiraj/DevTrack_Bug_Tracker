@@ -175,16 +175,13 @@ export default function ProjectsPage() {
                     Board
                   </Link>
 
-                  {/* developers don't see New Issue here */}
-                  {user?.role !== 'developer' && (
-                    <Link
-                      to={`/projects/${p.project_id}/issues/new`}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#78e5ef]/30 text-[#78e5ef] text-sm font-medium hover:bg-[#78e5ef]/10"
-                    >
-                      New issue
-                      <ChevronRight size={16} />
-                    </Link>
-                  )}
+                  <Link
+                    to={`/projects/${p.project_id}/issues/new`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#78e5ef]/30 text-[#78e5ef] text-sm font-medium hover:bg-[#78e5ef]/10"
+                  >
+                    New issue
+                    <ChevronRight size={16} />
+                  </Link>
 
                   {/* only admin / project_manager see Members button */}
                   {canManageMembers && (

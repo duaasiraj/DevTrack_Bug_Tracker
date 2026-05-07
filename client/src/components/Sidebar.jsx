@@ -34,7 +34,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const lastProjectId = getLastProjectId();
   const boardPath = lastProjectId ? `/projects/${lastProjectId}/board` : '/projects';
-  const newIssuePath = lastProjectId ? `/projects/${lastProjectId}/issues/new` : '/projects';
+  const newIssuePath = lastProjectId ? `/projects/${lastProjectId}/issues/new` : '/projects'
+  const allIssuesPath = '/issues';
 
   function handleLogout() {
     logout();
@@ -45,7 +46,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { name: 'Dashboard',      path: '/dashboard',   icon: <LayoutDashboard size={20} /> },
     { name: 'Projects',       path: '/projects',    icon: <FolderKanban size={20} /> },
     { name: 'Board',          path: boardPath,      icon: <LayoutGrid size={20} /> },
-    { name: 'Issues',         path: newIssuePath,   icon: <Bug size={20} /> },
+    { name: 'Issues',         path: allIssuesPath,   icon: <Bug size={20} /> },
     { name: 'Notifications',  path: '/notifications', icon: <Bell size={20} /> },
   ];
 
@@ -90,6 +91,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <NavLink
               key={item.name}
               to={item.path}
+              end={item.path === '/issues'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                   isActive

@@ -30,17 +30,24 @@ const register = async (req, res) => {
             });
         } 
 
+        const allowedRoles = ["admin", "project_manager", "developer", "tester"];
+        if (!role || !allowedRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid role is required: admin, project_manager, developer, or tester",
+            });
+        }
+
         const userExists = await pool.query(
             'SELECT * FROM users u WHERE u.email = $1',
             [email]
         );
 
-
         if(userExists.rows.length > 0){
-                return res.status(400).json({
-                    success: false,
-                    message: "Email already in use"
-                });
+            return res.status(400).json({
+                success: false,
+                message: "Email already in use"
+            });
         }
 
 
@@ -53,17 +60,6 @@ const register = async (req, res) => {
         );
 
         const user = newUser.rows[0]
-
-        const tokenPayload = {
-            user_id: user.user_id, 
-            username: user.username, 
-            email: user.email, 
-            role: user.role 
-        };
-
-        const token = generateToken(tokenPayload, res);
-
-
 
         res.status(201).json({
             success: true,
@@ -154,6 +150,67 @@ const login = async (req, res) => {
     
 };
 
+const resetPasswordByUserId = async (req, res) => {
+    try {
+        const { user_id, newPassword } = req.body;
+
+        if (!user_id || typeof user_id !== "string") {
+            return res.status(400).json({
+                success: false,
+                message: "user_id (UUID from the database) is required",
+            });
+        }
+
+        if (!newPassword || String(newPassword).length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters",
+            });
+        }
+
+        const trimmedId = user_id.trim();
+        const uuidRe =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRe.test(trimmedId)) {
+            return res.status(400).json({
+                success: false,
+                message: "user_id must be a valid UUID",
+            });
+        }
+
+        const found = await pool.query(
+            "SELECT user_id FROM users WHERE user_id = $1",
+            [trimmedId]
+        );
+
+        if (found.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No user found for this user_id",
+            });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(String(newPassword), salt);
+
+        await pool.query(
+            "UPDATE users SET hashed_password = $1 WHERE user_id = $2",
+            [hashedPassword, trimmedId]
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Password updated. You can sign in with the new password.",
+        });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 const logout = async (req, res) => {
     res.cookie("jwt", "", {
         httpOnly: true,
@@ -173,4 +230,4 @@ const getMe = (req, res) => {
     });
 };
 
-export {register, login, logout, getMe};
+export {register, login, logout, getMe, resetPasswordByUserId};
