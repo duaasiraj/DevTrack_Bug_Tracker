@@ -32,36 +32,36 @@ export default function IssueBoardPage() {
   useEffect(() => {
     if (!projectId || !user) return
     let cancelled = false
-    ;(async () => {
-      await Promise.resolve()
-      if (cancelled) return
-      setLoading(true)
-      setError('')
-      try {
-        const [projRes, issuesRes] = await Promise.all([
-          api.get(`/projects/${projectId}`),
-          api.get('/issues/', {
-            params: {
-              project_id: projectId,
-              ...(user.role === 'developer' ? { assigned_to: user.user_id } : {}),
-              ...(filterStatus ? { status: filterStatus } : {}),
-              ...(filterPriority ? { priority: filterPriority } : {}),
-              ...(filterType ? { type: filterType } : {}),
-            },
-          }),
-        ])
+      ; (async () => {
+        await Promise.resolve()
         if (cancelled) return
-        setProject(projRes.data.data)
-        setIssues(issuesRes.data.data || [])
-      } catch (e) {
-        if (cancelled) return
-        setError(e.response?.data?.message || e.message || 'Failed to load board')
-        setProject(null)
-        setIssues([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
+        setLoading(true)
+        setError('')
+        try {
+          const [projRes, issuesRes] = await Promise.all([
+            api.get(`/projects/${projectId}`),
+            api.get('/issues/', {
+              params: {
+                project_id: projectId,
+                ...(user.role === 'developer' ? { assigned_to: user.user_id } : {}),
+                ...(filterStatus ? { status: filterStatus } : {}),
+                ...(filterPriority ? { priority: filterPriority } : {}),
+                ...(filterType ? { type: filterType } : {}),
+              },
+            }),
+          ])
+          if (cancelled) return
+          setProject(projRes.data.data)
+          setIssues(issuesRes.data.data || [])
+        } catch (e) {
+          if (cancelled) return
+          setError(e.response?.data?.message || e.message || 'Failed to load board')
+          setProject(null)
+          setIssues([])
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+      })()
     return () => {
       cancelled = true
     }
@@ -190,13 +190,14 @@ export default function IssueBoardPage() {
             <Filter size={16} />
             Filter
           </button>
-          <Link
-            to={`/projects/${projectId}/issues/new`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#78e5ef] text-[#042124] text-sm font-semibold hover:bg-[#9eedf3]"
-          >
-            <Plus size={18} />
-            New Issue
-          </Link>
+          {user?.role !== 'developer' && (
+            <Link
+              to={`/projects/${projectId}/issues/new`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#78e5ef] text-[#042124] text-sm font-semibold hover:bg-[#9eedf3]"
+            >
+              <Plus size={18} />
+              New Issue
+            </Link>)}
         </div>
       </div>
 
@@ -283,15 +284,13 @@ export default function IssueBoardPage() {
                     e.dataTransfer.effectAllowed = 'move'
                   }}
                   onDragEnd={() => setDraggingId(null)}
-                  className={`block rounded-lg border border-[#d2f5fa]/10 bg-[#171c1d] p-3 hover:border-[#78e5ef]/40 transition-colors cursor-grab active:cursor-grabbing ${
-                    draggingId === issue.issue_id ? 'opacity-60' : ''
-                  }`}
+                  className={`block rounded-lg border border-[#d2f5fa]/10 bg-[#171c1d] p-3 hover:border-[#78e5ef]/40 transition-colors cursor-grab active:cursor-grabbing ${draggingId === issue.issue_id ? 'opacity-60' : ''
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span
-                      className={`text-[11px] font-mono text-[#78e5ef]/80 ${
-                        issue.status === 'resolved' || issue.status === 'closed' ? 'line-through opacity-70' : ''
-                      }`}
+                      className={`text-[11px] font-mono text-[#78e5ef]/80 ${issue.status === 'resolved' || issue.status === 'closed' ? 'line-through opacity-70' : ''
+                        }`}
                     >
                       {formatIssueKey(issue.issue_id)}
                     </span>
@@ -319,12 +318,13 @@ export default function IssueBoardPage() {
                   </div>
                 </Link>
               ))}
-              <Link
-                to={`/projects/${projectId}/issues/new`}
-                className="block text-center text-xs text-[#78e5ef]/70 hover:text-[#78e5ef] py-2"
-              >
-                + Add Issue
-              </Link>
+              {user?.role !== 'developer' && (
+                <Link
+                  to={`/projects/${projectId}/issues/new`}
+                  className="block text-center text-xs text-[#78e5ef]/70 hover:text-[#78e5ef] py-2"
+                >
+                  + Add Issue
+                </Link>)}
             </div>
           </div>
         ))}
