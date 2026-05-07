@@ -61,7 +61,7 @@ function App() {
       {/* admin only */}
       <Route element={<ProtectedRoute requiredRole="admin" />}>
         <Route element={<AppLayout />}>
-          {/* <Route path="/admin" element={<AdminPanel />} /> */}
+          <Route path="/register" element={<Register />} />
         </Route>
       </Route>
 

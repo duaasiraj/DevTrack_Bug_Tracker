@@ -15,11 +15,12 @@ export default function Register() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-
     try {
-      const response = await api.post('/auth/register', { username, email, password, role })
-      login(response.data.data)
-      navigate('/dashboard')
+      await api.post('/auth/register', { username, email, password, role: 'developer' })
+      setSuccess(`User "${username}" created successfully.`)
+      setUsername('')
+      setEmail('')
+      setPassword('')
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong')
     }
@@ -85,7 +86,6 @@ export default function Register() {
               className="bg-[#0a1f1f] border border-[#1a3f3f] text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#2a7a7a]"
             >
               <option value="">Select a role...</option>
-              <option value="admin">Admin</option>
               <option value="project_manager">Project Manager</option>
               <option value="developer">Developer</option>
               <option value="tester">Tester</option>

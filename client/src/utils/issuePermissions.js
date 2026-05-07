@@ -3,7 +3,12 @@
  * - status "closed": only admin | project_manager
  * - developers: only update issues assigned_to them (and thus only those should be editable in UI)
  */
-
+export function canReopenIssue(user, issue) {
+  if (user?.role === 'tester') {
+    return issue?.status === 'resolved'
+  }
+  return false
+}
 export function canSetClosedStatus(role) {
   return role === 'admin' || role === 'project_manager'
 }
