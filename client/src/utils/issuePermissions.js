@@ -1,7 +1,7 @@
 /**
  * Aligns with server/src/controllers/issueController.js
  * - status "closed": only admin | project_manager
- * - developers: only update issues assigned_to them (and thus only those should be editable in UI)
+ * - developers: update issues assigned to them or that they reported
  */
 export function canReopenIssue(user, issue) {
   if (user?.role === 'tester') {
@@ -17,9 +17,11 @@ export function isDeveloperLikeRestricted(role) {
   return role === 'developer'
 }
 
-/** Developers may only see/act on issues assigned to them (frontend guard; backend still enforces updates). */
+/** Developers may see issues assigned to them or that they reported (frontend guard; backend still enforces updates). */
 export function developerCanViewIssue(userId, issue) {
-  if (!issue?.assigned_to) return false
+  if (!issue) return false
+  if (issue.reported_by === userId) return true
+  if (!issue.assigned_to) return false
   return issue.assigned_to === userId
 }
 
@@ -27,7 +29,9 @@ export function canEditIssueFields(user, issue) {
   if (!user || !issue) return false
   if (user.role === 'admin' || user.role === 'project_manager' || user.role === 'tester') return true
   if (user.role === 'developer') {
-    return issue.assigned_to === user.user_id
+    return (
+      issue.assigned_to === user.user_id || issue.reported_by === user.user_id
+    )
   }
   return false
 }

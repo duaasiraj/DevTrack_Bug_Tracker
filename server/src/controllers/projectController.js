@@ -156,6 +156,12 @@ const createProject = async (req, res) =>{
             [project.project_id, req.user.user_id, "project_lead"]
         );
 
+        await client.query(
+            `INSERT INTO activity_log (project_id, user_id, issue_id, action_performed, details)
+            VALUES ($1, $2, NULL, 'created', $3)`,
+            [project.project_id, req.user.user_id, `Project created: ${project.name}`]
+        );
+
         await client.query("COMMIT");
  
         res.status(201).json({
@@ -568,6 +574,86 @@ const updateMemberRole = async (req,res) => {
   }
 };
 
+const getProjectIssueLog = async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
 
-export {updateMemberRole, getAllProjects, getProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, addMember, removeMember};
+    const memberCheck = await pool.query(
+      `SELECT 1 FROM project_members
+      WHERE user_id = $1 AND project_id = $2`,
+      [req.user.user_id, projectId]
+    );
+
+    if (memberCheck.rows.length === 0 && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a member of this project",
+      });
+    }
+
+    const projectExists = await pool.query(
+      `SELECT 1 FROM projects WHERE project_id = $1`,
+      [projectId]
+    );
+    if (projectExists.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT * FROM (
+        SELECT
+          'status_change'::text AS entry_type,
+          h.changed_at AS occurred_at,
+          h.issue_id,
+          i.title AS issue_title,
+          h.changed_by AS actor_id,
+          u.username AS actor_username,
+          h.old_status::text AS old_status,
+          h.new_status::text AS new_status,
+          NULL::text AS comment_preview,
+          h.history_id::text AS entry_id
+        FROM issue_status_history h
+        JOIN issues i ON i.issue_id = h.issue_id
+        LEFT JOIN users u ON u.user_id = h.changed_by
+        WHERE i.project_id = $1
+        UNION ALL
+        SELECT
+          'comment'::text AS entry_type,
+          c.created_at AS occurred_at,
+          c.issue_id,
+          i.title AS issue_title,
+          c.user_id AS actor_id,
+          u.username AS actor_username,
+          NULL::text AS old_status,
+          NULL::text AS new_status,
+          LEFT(TRIM(c.content), 280) AS comment_preview,
+          c.comment_id::text AS entry_id
+        FROM comments c
+        JOIN issues i ON i.issue_id = c.issue_id
+        LEFT JOIN users u ON u.user_id = c.user_id
+        WHERE i.project_id = $1
+      ) AS combined
+      ORDER BY combined.occurred_at DESC
+      LIMIT 300`,
+      [projectId]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+export {updateMemberRole, getAllProjects, getProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, addMember, removeMember, getProjectIssueLog};
 

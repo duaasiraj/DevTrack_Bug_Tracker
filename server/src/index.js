@@ -10,6 +10,7 @@ import issueRoutes from "./routes/issueRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js"
 import projectRoutes from "./routes/projectRoutes.js"
 import userRoutes from "./routes/userRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/issues', issueRoutes);
 app.use('/api/issues/:issueId/comments', commentRoutes);
 //app.use('/api/comments', commentRoutes); I am unsure if we need this or not
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 app.use((err, req, res, next) => {
