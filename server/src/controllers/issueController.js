@@ -1,5 +1,9 @@
 import pool from "../db.js";
-import {createNotification} from "../utils/notificationHelper.js"
+import {
+    createNotification,
+    notifyAdminsAndProjectManagers,
+    notifyDeveloperTesterStakeholders,
+} from "../utils/notificationHelper.js"
 
 async function mergeIssueLabels(rows) {
     if (!rows?.length) return rows;
@@ -287,6 +291,17 @@ const createIssue = async (req, res) =>{
             }
         }
 
+        try {
+            await notifyAdminsAndProjectManagers(
+                project_id,
+                created.issue_id,
+                req.user.user_id,
+                `New issue: ${created.title}`,
+                "status_changed"
+            );
+        } catch (notifError) {
+            console.log("Notification failed:", notifError.message);
+        }
 
         res.status(201).json({
             success: true,
@@ -396,9 +411,34 @@ const updateIssue = async(req, res) =>{
 
         await client.query("COMMIT");
 
+        const updatedRow = result.rows[0];
+
+        if (status && status !== issue.status) {
+            try {
+                const msg = `Status updated on "${issue.title}": ${issue.status} → ${status}`;
+                await notifyAdminsAndProjectManagers(
+                    issue.project_id,
+                    id,
+                    req.user.user_id,
+                    msg,
+                    "status_changed"
+                );
+                await notifyDeveloperTesterStakeholders(
+                    id,
+                    issue.assigned_to,
+                    issue.reported_by,
+                    req.user.user_id,
+                    msg,
+                    "status_changed"
+                );
+            } catch (notifError) {
+                console.log("Notification failed:", notifError.message);
+            }
+        }
+
         res.status(200).json({
             success: true,
-            data: result.rows[0],
+            data: updatedRow,
         });
 
     }catch(error){
@@ -498,9 +538,22 @@ const assignIssue = async(req, res) =>{
             
         await client.query("COMMIT");
 
-        try{
-        await createNotification(assigned_to, id, req.user.user_id, `You have been assigned issue: ${issue.title}`, "assigned");
-        }catch(notifError){
+        try {
+            const roleRes = await pool.query(
+                `SELECT role::text AS role FROM users WHERE user_id = $1`,
+                [assigned_to]
+            );
+            const assigneeRole = roleRes.rows[0]?.role;
+            if (assigneeRole === "developer" || assigneeRole === "tester") {
+                await createNotification(
+                    assigned_to,
+                    id,
+                    req.user.user_id,
+                    `You have been assigned issue: ${issue.title}`,
+                    "assigned"
+                );
+            }
+        } catch (notifError) {
             console.log("Notification failed:", notifError.message);
         }
 

@@ -1,5 +1,8 @@
 import pool from "../db.js";
-import {createNotification} from "../utils/notificationHelper.js";
+import {
+    notifyAdminsAndProjectManagers,
+    notifyDeveloperTesterStakeholders,
+} from "../utils/notificationHelper.js";
 
 const getComments = async (req, res) =>{
 
@@ -74,7 +77,7 @@ const createComment = async (req, res) =>{
         }
 
         const issueCheck = await pool.query(
-            `SELECT project_id, assigned_to, title
+            `SELECT project_id, assigned_to, reported_by, title
             FROM issues 
             WHERE issue_id = $1`,
             [issueId]
@@ -113,16 +116,25 @@ const createComment = async (req, res) =>{
             [issueId, req.user.user_id, content.trim()]
         );
 
-        if(issue.assigned_to){
-
-            try{
-
-                await createNotification(issue.assigned_to, issueId, req.user.user_id, `New comment on issue: ${issue.title}`, "commented");
-
-            }catch(notifError){
-                console.log("Notification failed:", notifError.message);
-            }
-
+        try {
+            const msg = `New comment on: ${issue.title}`;
+            await notifyAdminsAndProjectManagers(
+                issue.project_id,
+                issueId,
+                req.user.user_id,
+                msg,
+                "commented"
+            );
+            await notifyDeveloperTesterStakeholders(
+                issueId,
+                issue.assigned_to,
+                issue.reported_by,
+                req.user.user_id,
+                msg,
+                "commented"
+            );
+        } catch (notifError) {
+            console.log("Notification failed:", notifError.message);
         }
 
         res.status(201).json({

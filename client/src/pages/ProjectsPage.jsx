@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FolderKanban, LayoutGrid, ChevronRight, Users, X, Trash2, Plus } from 'lucide-react'
+import { FolderKanban, LayoutGrid, ChevronRight, Users, X, Trash2, Plus, BarChart3 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { fetchProjectsForUser } from '../api/projectService'
 import api from '../api/axios'
+import { clearLastProjectIdIfMatch } from '../hooks/useLastProjectId'
 
 export default function ProjectsPage() {
   const { user } = useAuth()
@@ -27,6 +28,15 @@ export default function ProjectsPage() {
   const canManageMembers = user?.role === 'admin' || user?.role === 'project_manager'
   const canCreateProject = user?.role === 'admin'
 
+  function canDeleteProject(p) {
+    if (!user) return false
+    if (user.role === 'admin') return true
+    if (user.role !== 'project_manager') return false
+    if (p.created_by != null && String(p.created_by) === String(user.user_id)) return true
+    const role = p.project_role
+    return role === 'project_manager' || role === 'project_lead'
+  }
+
   // ── Create Project Modal State ──
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
@@ -37,6 +47,7 @@ export default function ProjectsPage() {
   const [selectedPM, setSelectedPM] = useState(null)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -195,6 +206,29 @@ export default function ProjectsPage() {
       console.error('Could not remove member:', e.response?.data || e.message)
     } finally {
       setRemoving(null)
+    }
+  }
+
+  async function handleDeleteProject(projectId, projectName) {
+    if (
+      !window.confirm(
+        `Delete project “${projectName}”? All issues, comments, and activity for this project will be permanently removed. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+    setDeletingId(projectId)
+    setError('')
+    try {
+      await api.delete(`/projects/${projectId}`)
+      clearLastProjectIdIfMatch(projectId)
+      if (managingProjectId === projectId) closePanel()
+      const list = await fetchProjectsForUser(user)
+      setProjects(list)
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || 'Could not delete project')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -359,7 +393,14 @@ export default function ProjectsPage() {
                   <FolderKanban size={22} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="font-semibold text-white truncate">{p.name}</h2>
+                  <h2 className="font-semibold text-white truncate">
+                    <Link
+                      to={`/projects/${p.project_id}`}
+                      className="hover:text-[#78e5ef] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#78e5ef]/40 rounded"
+                    >
+                      {p.name}
+                    </Link>
+                  </h2>
                   <p className="text-sm text-gray-400 line-clamp-2 mt-1">{p.description || 'No description'}</p>
                   <p className="text-[10px] uppercase tracking-wider text-[#78e5ef]/50 mt-2">
                     {p.status?.replace('_', ' ') ?? 'active'}
@@ -369,6 +410,13 @@ export default function ProjectsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 shrink-0">
+                <Link
+                  to={`/projects/${p.project_id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#78e5ef]/40 text-[#78e5ef] text-sm font-medium hover:bg-[#78e5ef]/10"
+                >
+                  <BarChart3 size={16} aria-hidden />
+                  Details
+                </Link>
                 <Link
                   to={`/projects/${p.project_id}/board`}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#78e5ef]/15 text-[#78e5ef] text-sm font-medium hover:bg-[#78e5ef]/25"
@@ -391,6 +439,17 @@ export default function ProjectsPage() {
                     }`}
                   >
                     <Users size={16} /> Members
+                  </button>
+                )}
+                {canDeleteProject(p) && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteProject(p.project_id, p.name)}
+                    disabled={deletingId === p.project_id}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/35 text-red-300/90 text-sm font-medium hover:bg-red-500/15 disabled:opacity-45 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
+                  >
+                    <Trash2 size={16} aria-hidden />
+                    {deletingId === p.project_id ? 'Deleting…' : 'Delete'}
                   </button>
                 )}
               </div>

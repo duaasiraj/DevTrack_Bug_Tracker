@@ -11,6 +11,7 @@ import notificationRoutes from "./routes/notificationRoutes.js"
 import projectRoutes from "./routes/projectRoutes.js"
 import userRoutes from "./routes/userRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -111,9 +112,12 @@ app.get('/api/stats/summary', async (req, res) => {
 // returning empty results.
 // ─────────────────────────────────────────────────────────────
 
+app.use('/api/stats', statsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);   // handles all /api/projects/* including members
+// Must be registered before /api/issues so GET/POST …/issues/:issueId/comments is not swallowed by the issues router.
+app.use('/api/issues/:issueId/comments', commentRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);         // handles /api/admin/users for Dashboard
