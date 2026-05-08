@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FolderKanban, LayoutGrid, ChevronRight, Users, X, Trash2 } from 'lucide-react'
+import { FolderKanban, LayoutGrid, ChevronRight, Users, X, Trash2, Plus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { fetchProjectsForUser } from '../api/projectService'
 import api from '../api/axios'
@@ -25,6 +25,18 @@ export default function ProjectsPage() {
   const [removing, setRemoving] = useState(null)
 
   const canManageMembers = user?.role === 'admin' || user?.role === 'project_manager'
+  const canCreateProject = user?.role === 'admin'
+
+  // ── Create Project Modal State ──
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectDesc, setNewProjectDesc] = useState('')
+  const [pmSearch, setPmSearch] = useState('')
+  const [pmResults, setPmResults] = useState([])
+  const [pmSearching, setPmSearching] = useState(false)
+  const [selectedPM, setSelectedPM] = useState(null)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +75,55 @@ export default function ProjectsPage() {
     }, 300)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [searchQuery])
+
+  useEffect(() => {
+    if (!pmSearch.trim() || pmSearch.length < 2) { setPmResults([]); return }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      setPmSearching(true)
+      try {
+        const res = await api.get('/users/search', { params: { query: pmSearch } })
+        if (!cancelled) setPmResults(res.data.data || [])
+      } catch { if (!cancelled) setPmResults([]) }
+      finally { if (!cancelled) setPmSearching(false) }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [pmSearch])
+
+  function openCreateModal() {
+    setShowCreateModal(true)
+    setNewProjectName('')
+    setNewProjectDesc('')
+    setPmSearch('')
+    setPmResults([])
+    setSelectedPM(null)
+    setCreateError('')
+  }
+
+  function closeCreateModal() {
+    setShowCreateModal(false)
+    setCreateError('')
+  }
+
+  async function handleCreateProject() {
+    if (!newProjectName.trim() || !selectedPM) return
+    setCreating(true)
+    setCreateError('')
+    try {
+      await api.post('/projects', {
+        name: newProjectName.trim(),
+        description: newProjectDesc.trim() || undefined,
+        projectManagerId: selectedPM.user_id,
+      })
+      const list = await fetchProjectsForUser(user)
+      setProjects(list)
+      closeCreateModal()
+    } catch (e) {
+      setCreateError(e.response?.data?.message || e.message || 'Failed to create project')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   async function fetchMembers(projectId) {
     setMembersLoading(true)
@@ -158,7 +219,136 @@ export default function ProjectsPage() {
             Open a project to manage issues on the board, create work items, and collaborate.
           </p>
         </div>
+        {canCreateProject && (
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#78e5ef]/15 border border-[#78e5ef]/40 text-[#78e5ef] text-sm font-semibold hover:bg-[#78e5ef]/25 transition-colors shrink-0"
+          >
+            <Plus size={16} /> Add Project
+          </button>
+        )}
       </div>
+
+      {/* ── Create Project Modal ── */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closeCreateModal}
+          />
+          {/* Modal */}
+          <div className="relative w-full max-w-md rounded-2xl border border-[#d2f5fa]/15 bg-[#0d1517] shadow-2xl p-6 space-y-5 z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">New Project</h2>
+              <button onClick={closeCreateModal} className="text-gray-500 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Project Name */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Project Name <span className="text-[#78e5ef]">*</span></label>
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="e.g. OS-level chat server"
+                className="w-full bg-[#042124] border border-[#78e5ef]/20 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#78e5ef] placeholder-gray-600 transition-colors"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Description</label>
+              <textarea
+                value={newProjectDesc}
+                onChange={(e) => setNewProjectDesc(e.target.value)}
+                placeholder="Brief description of the project…"
+                rows={3}
+                className="w-full bg-[#042124] border border-[#78e5ef]/20 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#78e5ef] placeholder-gray-600 resize-none transition-colors"
+              />
+            </div>
+
+            {/* Project Manager */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 uppercase tracking-widest">Project Manager <span className="text-[#78e5ef]">*</span></label>
+              {selectedPM ? (
+                <div className="flex items-center justify-between bg-[#78e5ef]/10 border border-[#78e5ef]/30 rounded-lg px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[11px] font-bold">
+                      {selectedPM.username.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-white font-medium">{selectedPM.username}</p>
+                      <p className="text-[11px] text-gray-500">{selectedPM.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedPM(null); setPmSearch('') }}
+                    className="text-gray-500 hover:text-red-400 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={pmSearch}
+                    onChange={(e) => { setPmSearch(e.target.value); setSelectedPM(null) }}
+                    placeholder="Search by username or email…"
+                    className="w-full bg-[#042124] border border-[#78e5ef]/20 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-[#78e5ef] placeholder-gray-600 transition-colors"
+                  />
+                  {pmSearching && (
+                    <span className="absolute right-3 top-3 text-xs text-gray-500">Searching…</span>
+                  )}
+                  {pmResults.length > 0 && (
+                    <ul className="absolute z-10 w-full mt-1 rounded-lg border border-[#78e5ef]/20 bg-[#042124] shadow-xl overflow-hidden">
+                      {pmResults.map((u) => (
+                        <li key={u.user_id}>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedPM(u); setPmSearch(u.username); setPmResults([]) }}
+                            className="w-full text-left px-3 py-2.5 text-sm hover:bg-[#78e5ef]/10 flex items-center justify-between text-white transition-colors"
+                          >
+                            <span>{u.username}</span>
+                            <span className="text-xs text-gray-500">{u.email}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {createError && (
+              <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                {createError}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={closeCreateModal}
+                className="flex-1 py-2.5 rounded-lg border border-[#d2f5fa]/15 text-gray-400 text-sm font-medium hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateProject}
+                disabled={creating || !newProjectName.trim() || !selectedPM}
+                className="flex-1 py-2.5 rounded-lg bg-[#78e5ef]/20 border border-[#78e5ef]/40 text-[#78e5ef] text-sm font-semibold hover:bg-[#78e5ef]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {creating ? 'Creating…' : 'Create Project'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ul className="grid gap-4 sm:grid-cols-1">
         {projects.map((p) => (

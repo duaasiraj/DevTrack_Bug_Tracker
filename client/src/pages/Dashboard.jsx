@@ -12,7 +12,7 @@ const Dashboard = () => {
   const userRole = user?.role?.replace('_', ' ').toLowerCase() || 'developer';
 
   const [stats, setStats] = useState({ 
-    projects: null, users: null, issues: null, sprints: 3, systemHealth: "98.2%" 
+    projects: null, users: null, issues: null, systemHealth: null 
   });
   const [dbUsers, setDbUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -92,41 +92,42 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="relative z-10 space-y-10 p-10 animate-in fade-in zoom-in duration-700">
-      <div className="flex justify-between items-center border-b border-[#78e5ef]/10 pb-8">
+    <div className="relative z-10 space-y-8 w-full animate-in fade-in duration-300">
+      <div className="flex items-start justify-between gap-4 border-b border-[#d2f5fa]/10 pb-6">
         <div>
-          <h2 className="text-3xl font-black text-[#78e5ef] tracking-tighter flex items-center gap-4 uppercase">
-            {userRole === 'admin' && <ShieldAlert size={32} className="text-red-500" />}
-            {userRole}_DASHBOARD
+          <p className="text-xs text-[#78e5ef]/60 uppercase tracking-widest">Workspace</p>
+          <h2 className="text-2xl font-bold text-white mt-1 flex items-center gap-3">
+            {userRole === 'admin' && <ShieldAlert size={22} className="text-red-400" />}
+            {userRole.charAt(0).toUpperCase() + userRole.slice(1)} Dashboard
           </h2>
-          <p className="text-[10px] text-[#78e5ef]/40 uppercase tracking-widest font-mono mt-2">
-            OPERATOR: {user?.username} // STATUS: ONLINE
+          <p className="text-sm text-gray-400 mt-1">
+            Logged in as <span className="text-white font-medium">{user?.username}</span> · Status: Online
           </p>
         </div>
         <button
           onClick={() => { logout(); navigate('/signin'); }}
-          className="text-[10px] font-bold text-red-500 border border-red-500/20 px-8 py-4 hover:bg-red-500/10 uppercase tracking-widest font-mono transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors shrink-0 mt-1"
         >
           TERMINATE_ACCESS
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Live Projects" value={stats.projects} icon={<Terminal />} color="text-cyan-400" />
         <StatCard label="Identifiers" value={stats.users} icon={<Group />} color="text-cyan-400" />
         <StatCard label="Threats" value={stats.issues} icon={<AlertCircle />} color="text-red-500" pulse={stats.issues > 0} />
         <StatCard label="Uptime" value={stats.systemHealth} icon={<Bolt />} color="text-cyan-400" bar />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-10">
           {(userRole === 'admin' || userRole === 'project manager') && (
             <div className="bg-[#042124]/60 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-xl shadow-2xl">
               <div className="px-8 py-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <UserCheck size={18} className="text-[#78e5ef]" />
-                  <h3 className="text-xs text-[#78e5ef] font-bold uppercase tracking-[0.3em] font-mono">
+                  <h3 className="text-sm text-[#78e5ef] font-semibold uppercase tracking-widest">
                     User_Node_Directory
                   </h3>
                 </div>
@@ -139,29 +140,29 @@ const Dashboard = () => {
                   </p>
                 ) : (
                   <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-black/40 text-white/30 uppercase tracking-widest text-[9px]">
+                    <thead className="bg-black/40 text-gray-500 uppercase tracking-widest text-xs">
                       <tr>
-                        <th className="px-10 py-8">User_Identity</th>
-                        <th className="px-10 py-8">System_Privilege</th>
-                        <th className="px-10 py-8 text-right">Access_Control</th>
+                        <th className="px-6 py-4 text-xs">User_Identity</th>
+                        <th className="px-6 py-4 text-xs">System_Privilege</th>
+                        <th className="px-6 py-4 text-xs text-right">Access_Control</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {dbUsers.map((u, i) => (
                         <tr key={u.user_id || u.id || i} className="hover:bg-[#78e5ef]/5 transition-all">
-                          <td className="px-10 py-6">
-                            <div className="font-bold text-white uppercase">{u.username}</div>
-                            <div className="text-[9px] text-white/20">{u.email}</div>
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-white text-sm">{u.username}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">{u.email}</div>
                           </td>
-                          <td className="px-10 py-6">
-                            <span className="px-3 py-1 bg-[#78e5ef]/5 text-[#78e5ef] text-[9px] font-bold rounded border border-[#78e5ef]/20 uppercase">
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-[#78e5ef]/5 text-[#78e5ef] text-xs font-medium rounded-md border border-[#78e5ef]/20 uppercase tracking-wide">
                               {(u.role || '').replace(/_/g, ' ')}
                             </span>
                           </td>
-                          <td className="px-10 py-6 text-right">
+                          <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => { setSelectedUser(u); setIsModalOpen(true); }}
-                              className="text-[9px] font-bold text-[#78e5ef] border border-[#78e5ef]/30 px-5 py-2 hover:bg-[#78e5ef] hover:text-black transition-all uppercase tracking-widest"
+                              className="text-xs font-semibold text-[#78e5ef] border border-[#78e5ef]/30 px-4 py-2 rounded-lg hover:bg-[#78e5ef]/10 transition-all uppercase tracking-wider"
                             >
                               Manage
                             </button>
@@ -179,15 +180,15 @@ const Dashboard = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           <div className="bg-[#042124]/60 border border-white/5 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
-            <h3 className="text-xs text-[#78e5ef] font-bold uppercase tracking-widest mb-10 flex items-center gap-3 font-mono">
+            <h3 className="text-sm text-[#78e5ef] font-semibold uppercase tracking-widest mb-6 flex items-center gap-3">
               <History size={16} /> Activity_Feed
             </h3>
-            <div className="space-y-10 font-mono text-[10px]">
+            <div className="space-y-4 text-sm">
               <div className="flex gap-4">
                 <div className="w-1 h-1 rounded-full mt-2 bg-green-500 shadow-[0_0_12px_#22c55e]"></div>
                 <div>
-                  <p className="text-white uppercase font-bold tracking-tighter">Sync_Protocol_Established</p>
-                  <p className="text-white/20 mt-1">PostgreSQL_Node: Connected</p>
+                  <p className="text-white font-semibold">Sync_Protocol_Established</p>
+                  <p className="text-gray-400 mt-1 text-xs">PostgreSQL_Node: Connected</p>
                 </div>
               </div>
             </div>
@@ -250,17 +251,17 @@ const Dashboard = () => {
 };
 
 const StatCard = ({ label, value, icon, color, pulse, bar }) => (
-  <div className="bg-[#042124]/50 border border-white/5 p-8 rounded-2xl shadow-2xl backdrop-blur-md hover:border-[#78e5ef]/30 transition-all group">
-    <div className="flex justify-between items-start mb-6 text-white/20 text-[9px] uppercase font-bold tracking-[0.2em] font-mono">
-      {label}
-      <span className={`${color} ${pulse ? 'animate-pulse shadow-[0_0_20px_rgba(255,0,0,0.4)]' : ''} group-hover:scale-125 transition-transform duration-500`}>
+  <div className="bg-[#042124]/50 border border-[#d2f5fa]/10 p-5 rounded-xl shadow-xl backdrop-blur-md hover:border-[#78e5ef]/30 transition-all group overflow-hidden">
+    <div className="flex justify-between items-start mb-4 gap-2">
+      <p className="text-xs text-[#78e5ef]/60 uppercase tracking-widest font-semibold truncate">{label}</p>
+      <span className={`${color} shrink-0 ${pulse ? 'animate-pulse' : ''} group-hover:scale-110 transition-transform duration-300`}>
         {icon}
       </span>
     </div>
-    <div className="text-5xl font-black text-white font-mono tracking-tighter">{value ?? "--"}</div>
+    <div className="text-3xl font-bold text-white tracking-tight truncate">{value ?? "--"}</div>
     {bar && (
-      <div className="w-full bg-black/60 h-1.5 mt-8 overflow-hidden rounded-full">
-        <div className="bg-[#78e5ef] h-full w-[85%] shadow-[0_0_20px_rgba(120,229,239,0.5)]"></div>
+      <div className="w-full bg-black/60 h-1 mt-4 overflow-hidden rounded-full">
+        <div className="bg-[#78e5ef] h-full transition-all duration-700" style={{ width: typeof value === 'string' && value.endsWith('%') ? value : '0%' }}></div>
       </div>
     )}
   </div>

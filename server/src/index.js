@@ -25,28 +25,77 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/stats/summary', async (req, res) => {
   try {
     const { role, userId } = req.query;
+    const normRole = role?.replace(/_/g, ' ').toLowerCase();
+
+    // ── Total projects ──
     const projectRes = await db.query('SELECT COUNT(*) FROM projects');
+
+    // ── Total users ──
     const userRes = await db.query('SELECT COUNT(*) FROM users');
-    let issueQuery = "SELECT COUNT(*) FROM issues WHERE severity = 'Critical'";
-    let queryParams = [];
-    const normRole = role?.replace('_', ' ').toLowerCase();
+
+    // ── Issues count (role-filtered) ──
+    // schema: issues.priority (low/medium/high/critical), issues.status (open/in_progress/resolved/closed)
+    let issueQuery;
+    let issueParams = [];
+
     if (normRole === 'developer') {
-      issueQuery = "SELECT COUNT(*) FROM issues WHERE assigned_to = $1 AND status != 'Resolved'";
-      queryParams = [userId];
-    } else if (normRole === 'tester') {
-      issueQuery = "SELECT COUNT(*) FROM issues WHERE status = 'Pending Testing' OR status = 'Reopened'";
+      // Issues in projects the developer is a member of
+      issueQuery = `
+        SELECT COUNT(DISTINCT i.issue_id) FROM issues i
+        JOIN project_members pm ON pm.project_id = i.project_id
+        WHERE pm.user_id = $1
+      `;
+      issueParams = [userId];
     } else if (normRole === 'project manager') {
-      issueQuery = "SELECT COUNT(*) FROM issues WHERE status != 'Resolved'";
+      // Issues in projects this PM manages
+      issueQuery = `
+        SELECT COUNT(DISTINCT i.issue_id) FROM issues i
+        JOIN project_members pm ON pm.project_id = i.project_id
+        WHERE pm.user_id = $1
+        AND pm.project_role IN ('project_manager', 'project_lead')
+      `;
+      issueParams = [userId];
+    } else {
+      // Admin and tester: all issues
+      issueQuery = 'SELECT COUNT(*) FROM issues';
     }
-    const issueRes = await db.query(issueQuery, queryParams);
+
+    const issueRes = await db.query(issueQuery, issueParams);
+
+    // ── Health: weighted resolved / weighted total * 100 ──
+    // priority values from schema: 'critical'=3, 'high'=3, 'medium'=2, 'low'=1
+    // status 'resolved' counts as resolved
+    const healthRes = await db.query(`
+      SELECT priority, status, COUNT(*) AS cnt
+      FROM issues
+      GROUP BY priority, status
+    `);
+
+    const weightMap = { critical: 3, high: 3, medium: 2, low: 1 };
+    let weightedTotal = 0;
+    let weightedResolved = 0;
+
+    for (const row of healthRes.rows) {
+      const weight = weightMap[row.priority?.toLowerCase()] ?? 1;
+      const count = parseInt(row.cnt);
+      weightedTotal += weight * count;
+      if (row.status === 'resolved') {
+        weightedResolved += weight * count;
+      }
+    }
+
+    const healthPct = weightedTotal === 0
+      ? 100
+      : Math.round((weightedResolved / weightedTotal) * 100);
+
     res.json({
       projects: parseInt(projectRes.rows[0]?.count) || 0,
       users: parseInt(userRes.rows[0]?.count) || 0,
       issues: parseInt(issueRes.rows[0]?.count) || 0,
-      sprints: 3,
-      systemHealth: "98.2%"
+      systemHealth: `${healthPct}%`,
     });
   } catch (err) {
+    console.error('Stats summary error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
