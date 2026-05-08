@@ -16,6 +16,7 @@ import NotificationsPage from './pages/NotificationsPage'
 import AllIssuesPage from './pages/AllIssuesPage'
 import AdminPage from './pages/AdminPage'
 import AdminActivityLogPage from './pages/AdminActivityLogPage'
+import ProjectDetailPage from './pages/ProjectDetailPage'
 import ProjectIssueLogPage from './pages/ProjectIssueLogPage'
 import FeaturesPage from './pages/FeaturesPage'
 import RolesPage from './pages/RolesPage'
@@ -72,6 +73,7 @@ function App() {
           <Route path="/projects/:projectId/issue-log" element={<ProjectIssueLogPage />} />
           <Route path="/projects/:projectId/issues/new" element={<IssueCreatePage />} />
           <Route path="/projects/:projectId/issues/:issueId" element={<IssueDetailPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
           <Route path="/issues" element={<AllIssuesPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Route>

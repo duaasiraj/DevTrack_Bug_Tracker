@@ -1,5 +1,5 @@
 import express from "express";
-import {updateMemberRole, getProjects, getAllProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, removeMember, addMember, getProjectIssueLog} from "../controllers/projectController.js";
+import {updateMemberRole, getProjects, getAllProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, removeMember, addMember, getProjectIssueLog, getProjectStats} from "../controllers/projectController.js";
 import {getLabels, createLabels, updateLabels, deleteLabel} from "../controllers/labelController.js";
 import {authMiddleware} from "../middleware/authMiddleware.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
@@ -14,6 +14,8 @@ router.get("/", authMiddleware, getProjects);
 router.post("/", authMiddleware, roleMiddleware(["admin", "project_manager"]), createProject);
 
 router.get("/:projectId/issue-log", authMiddleware, getProjectIssueLog);
+
+router.get("/:projectId/stats", authMiddleware, getProjectStats);
 
 router.get("/:id", authMiddleware, getProjectById);
 
