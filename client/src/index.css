@@ -2,29 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes dt-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dt-animate-in {
-  animation: dt-fade-in 0.38s ease-out both;
-}
-
 body {
   background-color: #0f1415;
   margin: 0;
-  color: #dfe3e4
-  
+  color: #dfe3e4;
+}
+
+/* Ensure Sidebar is always above content on small screens */
+aside, .sidebar-container {
+  z-index: 100 !important;
 }
 
 .card-glow {
   box-shadow: inset 0 0 20px rgba(120, 229, 239, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   font-family: 'Inter', sans-serif;
 }
+

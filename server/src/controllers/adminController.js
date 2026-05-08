@@ -33,11 +33,86 @@ const getAdminActivityLog = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export { getAdminActivityLog };
+// GET /api/admin/users — returns all users for the Dashboard user table
+const getUsers = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT user_id, username, email, role
+       FROM users
+       ORDER BY username ASC`
+    );
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /api/admin/users/:userId/role — update a user's system role
+const updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({ success: false, message: "role is required" });
+    }
+
+    // Normalise: accept "project manager" or "project_manager"
+    const normalised = role.trim().toLowerCase().replace(' ', '_');
+    const allowed = ['admin', 'project_manager', 'developer', 'tester'];
+    if (!allowed.includes(normalised)) {
+      return res.status(400).json({ success: false, message: `Invalid role. Must be one of: ${allowed.join(', ')}` });
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET role = $1 WHERE user_id = $2
+       RETURNING user_id, username, email, role`,
+      [normalised, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE /api/admin/users/:userId — permanently delete a user
+const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Prevent self-deletion
+    if (String(userId) === String(req.user.user_id)) {
+      return res.status(400).json({ success: false, message: "Cannot delete your own account" });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM users WHERE user_id = $1 RETURNING user_id, username`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${result.rows[0].username} deleted successfully`,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { getAdminActivityLog, getUsers, updateUserRole, deleteUser };

@@ -130,12 +130,31 @@ const createProject = async (req, res) =>{
 
     try{
         
-        const {name, description} = req.body;
+        const {name, description, projectManagerId} = req.body;
 
         if(!name){
             return res.status(400).json({
                 success: false,
                 message: "Project name is required",
+            });
+        }
+
+        if(!projectManagerId){
+            return res.status(400).json({
+                success: false,
+                message: "A project manager is required",
+            });
+        }
+
+        // Verify the project manager user exists
+        const pmCheck = await client.query(
+            `SELECT user_id, username FROM users WHERE user_id = $1`,
+            [projectManagerId]
+        );
+        if(pmCheck.rows.length === 0){
+            return res.status(404).json({
+                success: false,
+                message: "Project manager user not found",
             });
         }
         
@@ -150,10 +169,21 @@ const createProject = async (req, res) =>{
 
         const project = projResult.rows[0]
 
+        // Add creator as project_lead (only if they are not the same as the PM)
+        if(String(req.user.user_id) !== String(projectManagerId)){
+            await client.query(
+                `INSERT INTO project_members (project_id, user_id, project_role)
+                VALUES ($1, $2, $3)`,
+                [project.project_id, req.user.user_id, "project_lead"]
+            );
+        }
+
+        // Add the chosen project manager
         await client.query(
             `INSERT INTO project_members (project_id, user_id, project_role)
-            VALUES ($1, $2, $3)`,
-            [project.project_id, req.user.user_id, "project_lead"]
+            VALUES ($1, $2, $3)
+            ON CONFLICT (project_id, user_id) DO UPDATE SET project_role = 'project_manager'`,
+            [project.project_id, projectManagerId, "project_manager"]
         );
 
         await client.query(
