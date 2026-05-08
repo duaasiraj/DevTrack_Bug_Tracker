@@ -1,5 +1,25 @@
 import pool from "../db.js";
 
+/** Non-admins: project creator, or member with project_manager / project_lead role. */
+async function canManageProject(conn, projectId, user) {
+  if (user.role === "admin") return true;
+  const r = await conn.query(
+    `SELECT 1 FROM projects p
+     WHERE p.project_id = $1
+     AND (
+       p.created_by = $2
+       OR EXISTS (
+         SELECT 1 FROM project_members pm
+         WHERE pm.project_id = p.project_id
+         AND pm.user_id = $2
+         AND pm.project_role IN ('project_manager', 'project_lead')
+       )
+     )`,
+    [projectId, user.user_id]
+  );
+  return r.rows.length > 0;
+}
+
 const getProjects = async (req, res) =>{
 
     try{
@@ -228,22 +248,15 @@ const updateProject = async (req, res) =>{
         }
 
         if(req.user.role !== "admin"){
-            const creatorCheck = await pool.query(
-                `SELECT 1 FROM projects
-                WHERE project_id = $1 AND created_by = $2`,
-                [id, req.user.user_id]
-            );
-
-            if(creatorCheck.rows.length===0){
-
+            const ok = await canManageProject(pool, id, req.user);
+            if (!ok) {
                 return res.status(403).json({
                     success: false,
-                    message: "Only the project owner/manager can update this project"
+                    message: "Only admins or project leads/managers for this project can update it"
                 });
-
             }
-
         }
+
         const result = await pool.query(
 
             `UPDATE projects SET
@@ -285,17 +298,12 @@ const deleteProject = async (req, res) =>{
         const id = req.params.id;
 
         if(req.user.role !== "admin"){
-            const creatorCheck = await pool.query(
-                `SELECT 1 FROM projects
-                WHERE project_id = $1 AND created_by = $2`,
-                [id, req.user.user_id]
-            );
-
-            if(creatorCheck.rows.length===0){
+            const ok = await canManageProject(pool, id, req.user);
+            if (!ok) {
 
                 return res.status(403).json({
                     success: false,
-                    message: "Only the project owner/manager can update this project"
+                    message: "Only admins or project leads/managers for this project can delete it"
                 });
 
             }
@@ -394,24 +402,17 @@ const addMember = async (req, res) =>{
         }
 
         if(req.user.role !== "admin"){
-            const creatorCheck = await pool.query(
-                `SELECT 1 FROM projects
-                WHERE project_id = $1 AND created_by = $2`,
-                [id, req.user.user_id]
-            );
-
-            if(creatorCheck.rows.length===0){
+            const ok = await canManageProject(pool, id, req.user);
+            if(!ok){
 
                 return res.status(403).json({
                     success: false,
-                    message: "Only the project owner/manager can update this project"
+                    message: "Only admins or project leads/managers for this project can add members"
                 });
 
             }
 
         }
-
-        await client.query("BEGIN");
 
         const projectCheck = await client.query(
             `SELECT 1 FROM projects 
@@ -490,17 +491,12 @@ const removeMember = async (req, res) =>{
         const {id, userId} = req.params;
 
         if(req.user.role !== "admin"){
-            const creatorCheck = await pool.query(
-                `SELECT 1 FROM projects
-                WHERE project_id = $1 AND created_by = $2`,
-                [id, req.user.user_id]
-            );
-
-            if(creatorCheck.rows.length===0){
+            const ok = await canManageProject(pool, id, req.user);
+            if(!ok){
 
                 return res.status(403).json({
                     success: false,
-                    message: "Only the project owner/manager can update this project"
+                    message: "Only admins or project leads/managers for this project can remove members"
                 });
 
             }
@@ -557,20 +553,15 @@ const updateMemberRole = async (req,res) => {
     }
 
     if(req.user.role !== "admin"){
-            const creatorCheck = await pool.query(
-                `SELECT 1 FROM projects
-                WHERE project_id = $1 AND created_by = $2`,
-                [id, req.user.user_id]
-            );
+        const ok = await canManageProject(pool, id, req.user);
+        if(!ok){
 
-            if(creatorCheck.rows.length===0){
+            return res.status(403).json({
+                success: false,
+                message: "Only admins or project leads/managers for this project can change member roles"
+            });
 
-                return res.status(403).json({
-                    success: false,
-                    message: "Only the project owner/manager can update this project"
-                });
-
-            }
+        }
 
     }
 
@@ -684,6 +675,91 @@ const getProjectIssueLog = async (req, res) => {
   }
 };
 
+const getProjectStats = async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
 
-export {updateMemberRole, getAllProjects, getProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, addMember, removeMember, getProjectIssueLog};
+    const memberCheck = await pool.query(
+      `SELECT 1 FROM project_members
+      WHERE user_id = $1 AND project_id = $2`,
+      [req.user.user_id, projectId]
+    );
+
+    if (memberCheck.rows.length === 0 && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not a member of this project",
+      });
+    }
+
+    const projectExists = await pool.query(
+      `SELECT 1 FROM projects WHERE project_id = $1`,
+      [projectId]
+    );
+    if (projectExists.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const [totalRes, statusRes, priorityRes] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS total FROM issues WHERE project_id = $1`,
+        [projectId]
+      ),
+      pool.query(
+        `SELECT i.status::text AS status, COUNT(*)::int AS count
+        FROM issues i
+        WHERE i.project_id = $1
+        GROUP BY i.status`,
+        [projectId]
+      ),
+      pool.query(
+        `SELECT i.priority::text AS priority, COUNT(*)::int AS count
+        FROM issues i
+        WHERE i.project_id = $1
+        GROUP BY i.priority`,
+        [projectId]
+      ),
+    ]);
+
+    const totalIssues = totalRes.rows[0]?.total ?? 0;
+    const byStatus = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
+    for (const row of statusRes.rows) {
+      if (Object.prototype.hasOwnProperty.call(byStatus, row.status)) {
+        byStatus[row.status] = row.count;
+      }
+    }
+    const resolvedCount = (byStatus.resolved || 0) + (byStatus.closed || 0);
+    const unresolvedCount = Math.max(0, totalIssues - resolvedCount);
+
+    const byPriority = { low: 0, medium: 0, high: 0, critical: 0 };
+    for (const row of priorityRes.rows) {
+      if (Object.prototype.hasOwnProperty.call(byPriority, row.priority)) {
+        byPriority[row.priority] = row.count;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        total_issues: totalIssues,
+        by_status: byStatus,
+        resolved_count: resolvedCount,
+        unresolved_count: unresolvedCount,
+        by_priority: byPriority,
+      },
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+export {updateMemberRole, getAllProjects, getProjects, getProjectById, createProject, updateProject, deleteProject, getMembers, addMember, removeMember, getProjectIssueLog, getProjectStats};
 

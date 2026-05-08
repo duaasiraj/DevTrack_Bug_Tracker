@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
-import { KeyRound } from 'lucide-react'
+import { ArrowLeft, KeyRound } from 'lucide-react'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
@@ -69,6 +69,14 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-[#0a1f1f] flex flex-col items-center justify-center px-4 py-10">
+      <Link
+        to="/"
+        className="fixed top-5 left-5 sm:top-6 sm:left-6 inline-flex items-center gap-2 text-sm text-[#7aa8a8] hover:text-[#c8faf4] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#78e5ef]/40 rounded-lg px-2 py-1"
+      >
+        <ArrowLeft size={16} aria-hidden />
+        Back to home
+      </Link>
+
       <div className="text-center mb-8">
         <h1 className="text-white text-3xl font-bold tracking-tight">⊙ DevTrack</h1>
         <h2 className="text-white text-xl font-semibold mt-2">Sign In</h2>
