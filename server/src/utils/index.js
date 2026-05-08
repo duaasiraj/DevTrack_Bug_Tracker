@@ -21,7 +21,6 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // --- DASHBOARD STATS ---
-// This route has no authMiddleware intentionally (stats are role-filtered by query param).
 app.get('/api/stats/summary', async (req, res) => {
   try {
     const { role, userId } = req.query;
@@ -51,23 +50,35 @@ app.get('/api/stats/summary', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// DO NOT add any /api/projects/:id/members routes here.
-// They are fully handled by projectRoutes.js → projectController.js
-// which uses the correct column name "project_role" and has
-// authMiddleware + roleMiddleware protecting them.
-//
-// Adding duplicate inline routes here causes them to fire FIRST
-// (before the router) and they query the wrong column "proj_role",
-// returning empty results.
-// ─────────────────────────────────────────────────────────────
+// --- PROJECT LIST FOR USER ---
+// NOTE: This is handled by projectRoutes GET "/" via authMiddleware.
+// The route below is a fallback for userId-based lookups not covered by the router.
+app.get('/api/users/:userId/projects', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await db.query(
+      `SELECT p.project_id, p.name, p.description, p.status, pm.proj_role as project_role
+       FROM projects p
+       JOIN project_members pm ON p.project_id = pm.project_id
+       WHERE pm.user_id = $1`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// NOTE: All /api/projects/:id/members routes (GET, POST) are now fully
+// handled by projectRoutes.js with proper auth + role middleware.
+// Do NOT duplicate them here — duplicates cause route conflicts.
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/projects', projectRoutes);   // handles all /api/projects/* including members
+app.use('/api/projects', projectRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);         // handles /api/admin/users for Dashboard
+app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
