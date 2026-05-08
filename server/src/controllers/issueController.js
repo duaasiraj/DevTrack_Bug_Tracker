@@ -1,18 +1,72 @@
 import pool from "../db.js";
 import {createNotification} from "../utils/notificationHelper.js"
 
+async function mergeIssueLabels(rows) {
+    if (!rows?.length) return rows;
+    const ids = rows.map((r) => r.issue_id);
+    const { rows: labRows } = await pool.query(
+        `SELECT il.issue_id, l.label_id, l.name, l.color_hex
+        FROM issue_labels il
+        JOIN labels l ON l.label_id = il.label_id
+        WHERE il.issue_id = ANY($1::uuid[])`,
+        [ids]
+    );
+    const map = {};
+    for (const r of labRows) {
+        if (!map[r.issue_id]) map[r.issue_id] = [];
+        map[r.issue_id].push({
+            label_id: r.label_id,
+            name: r.name,
+            color_hex: r.color_hex,
+        });
+    }
+    return rows.map((issue) => ({
+        ...issue,
+        labels: map[issue.issue_id] || [],
+    }));
+}
+
 const getIssues = async(req, res) =>{
     
     try{
 
-        const {project_id, status, priority, assigned_to, type} = req.query;
+        const {project_id, status, priority, assigned_to, type, scope} = req.query;
+        const memberProjectsScope = scope === "member_projects";
 
-        if(!project_id){
+        if(!project_id && !memberProjectsScope){
             return res.status(400).json({
                 success: false,
-                message: "project_id is required as a query parameter"
+                message: "project_id is required unless scope=member_projects"
             });
         }
+
+        if(project_id && memberProjectsScope){
+            return res.status(400).json({
+                success: false,
+                message: "Cannot use project_id together with scope=member_projects"
+            });
+        }
+
+        let query;
+        const values = [];
+        let count = 1;
+
+        if(memberProjectsScope){
+            query = `SELECT i.issue_id, i.project_id, p.name AS project_name, i.title, i.description, i.type, i.priority, i.status, i.created_at, i.last_updated, i.resolved_at, u1.username AS reported_by_username, u2.username AS assigned_to_username, i.reported_by, i.assigned_to
+        FROM issues i
+        JOIN projects p ON i.project_id = p.project_id
+        LEFT JOIN users u1 ON i.reported_by = u1.user_id
+        LEFT JOIN users u2 ON i.assigned_to = u2.user_id
+        WHERE `;
+
+            if(req.user.role === "admin"){
+                query += "1=1";
+            } else {
+                query += `i.project_id IN (SELECT project_id FROM project_members WHERE user_id = $${count})`;
+                values.push(req.user.user_id);
+                count++;
+            }
+        } else {
 
         if(req.user.role !== "admin"){
             
@@ -32,15 +86,16 @@ const getIssues = async(req, res) =>{
 
         }
 
-        let query = `SELECT i.issue_id, i.title, i.description, i.type, i.priority, i.status, i.created_at, i.last_updated, i.resolved_at, u1.username AS reported_by_username, u2.username AS assigned_to_username, i.reported_by, i.assigned_to
+        query = `SELECT i.issue_id, i.project_id, i.title, i.description, i.type, i.priority, i.status, i.created_at, i.last_updated, i.resolved_at, u1.username AS reported_by_username, u2.username AS assigned_to_username, i.reported_by, i.assigned_to
         FROM issues i
         LEFT JOIN users u1 ON i.reported_by = u1.user_id
         LEFT JOIN users u2 ON i.assigned_to = u2.user_id
-        WHERE i.project_id = $1`;
+        WHERE i.project_id = $${count}`;
 
-        const values = [project_id];
+        values.push(project_id);
+        count++;
 
-        let count = 2;
+        }
 
         if(status){
             query += ` AND i.status = $${count}`;
@@ -55,9 +110,18 @@ const getIssues = async(req, res) =>{
         }
 
         if(assigned_to){
-            query += ` AND i.assigned_to = $${count}`;
-            values.push(assigned_to);
-            count++;
+            if (
+                req.user.role === "developer" &&
+                String(assigned_to) === String(req.user.user_id)
+            ) {
+                query += ` AND (i.assigned_to = $${count} OR i.reported_by = $${count})`;
+                values.push(assigned_to);
+                count++;
+            } else {
+                query += ` AND i.assigned_to = $${count}`;
+                values.push(assigned_to);
+                count++;
+            }
         }
 
         if(type){
@@ -70,9 +134,11 @@ const getIssues = async(req, res) =>{
 
         const result = await pool.query(query, values);
 
+        const data = await mergeIssueLabels(result.rows);
+
         res.status(200).json({
             success: true,
-            data: result.rows
+            data
         });
 
 
@@ -159,7 +225,7 @@ const createIssue = async (req, res) =>{
 
     try {
     
-        const {project_id, title, description, type, priority} = req.body;
+        const {project_id, title, description, type, priority, label_ids} = req.body;
 
         if(!project_id){
             return res.status(400).json({
@@ -202,10 +268,29 @@ const createIssue = async (req, res) =>{
 
         );
 
+        const created = result.rows[0];
+
+        if (Array.isArray(label_ids) && label_ids.length > 0) {
+            for (const lid of label_ids) {
+                if (!lid) continue;
+                const ok = await pool.query(
+                    `SELECT 1 FROM labels WHERE label_id = $1 AND project_id = $2`,
+                    [lid, project_id]
+                );
+                if (ok.rows.length > 0) {
+                    await pool.query(
+                        `INSERT INTO issue_labels (issue_id, label_id) VALUES ($1, $2)
+                        ON CONFLICT (issue_id, label_id) DO NOTHING`,
+                        [created.issue_id, lid]
+                    );
+                }
+            }
+        }
+
 
         res.status(201).json({
             success: true,
-            data: result.rows[0]
+            data: created
         });
 
     }catch(error){
@@ -276,10 +361,14 @@ const updateIssue = async(req, res) =>{
             });
         }
 
-        if (req.user.role ==="developer" && issue.assigned_to !== req.user.user_id){
+        if (
+            req.user.role === "developer" &&
+            issue.assigned_to !== req.user.user_id &&
+            issue.reported_by !== req.user.user_id
+        ) {
             return res.status(403).json({
                 success: false,
-                message: "Developers can only update issues assigned to them",
+                message: "Developers can only update issues assigned to them or that they reported",
             });
         }
 
