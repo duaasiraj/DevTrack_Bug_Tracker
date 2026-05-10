@@ -419,9 +419,9 @@ const addMember = async (req, res) =>{
             WHERE project_id = $1`,
             [id]
         );
-
+        
         if (projectCheck.rows.length === 0) {
-        await client.query("ROLLBACK");
+        
         return res.status(404).json({ 
             success: false, 
             message: "Project not found" 
@@ -435,7 +435,7 @@ const addMember = async (req, res) =>{
         );
 
         if (userCheck.rows.length === 0) {
-            await client.query("ROLLBACK");
+            
             return res.status(404).json({ 
                 success: false, 
                 message: "User not found" 
@@ -450,13 +450,13 @@ const addMember = async (req, res) =>{
         );
 
         if (alreadyMember.rows.length !== 0) {
-            await client.query("ROLLBACK");
+            
             return res.status(400).json({ 
                 success: false, 
                 message: "User already in this project" 
             });
         }
-
+        await client.query("BEGIN");
         const newUser = await client.query(
             `INSERT INTO project_members (project_id, user_id, project_role)
             VALUES ($1, $2, $3)
